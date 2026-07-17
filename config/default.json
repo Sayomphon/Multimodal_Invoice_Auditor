@@ -1,0 +1,17 @@
+{
+  "config_version": "1.0.0",
+  "required_fields": ["invoice_number", "invoice_date", "total"],
+  "expected_vat_rate": "0.07",
+  "money_tolerance": "0.02",
+  "vat_rate_tolerance": "0.001",
+  "future_date_grace_days": 0,
+  "severity": {
+    "required_fields": "review",
+    "total_consistency": "reject",
+    "vat_rate": "review",
+    "tax_id_format": "review",
+    "duplicate_invoice": "reject",
+    "future_date": "review"
+  }
+}
+

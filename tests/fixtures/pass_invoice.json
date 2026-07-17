@@ -1,0 +1,11 @@
+{
+  "invoice_number": "INV-2026-001",
+  "vendor_name": "บริษัท ตัวอย่าง จำกัด",
+  "tax_id": "0105569123457",
+  "invoice_date": "2026-07-15",
+  "subtotal": "10,000.00",
+  "vat": "700.00",
+  "total": "10,700.00",
+  "currency": "THB"
+}
+

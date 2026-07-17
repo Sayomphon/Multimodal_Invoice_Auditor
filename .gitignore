@@ -1,0 +1,38 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+
+# Model and notebook caches
+.cache/
+models/
+.ipynb_checkpoints/
+
+# Generated/private data. Keep only placeholders and small public fixtures.
+data/sroie_subset/*
+!data/sroie_subset/.gitkeep
+data/synthetic/*
+!data/synthetic/.gitkeep
+reports/*.jsonl
+reports/*.csv
+reports/*.png
+reports/*.gif
+!reports/.gitkeep
+
+# Local secrets and runtime files
+.env
+.env.*
+!.env.example
+*.log
+*.tmp
+.DS_Store
+
+# Local planning/source documents are not part of the code release.
+*.docx

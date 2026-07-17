@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multimodal-invoice-auditor"
+version = "0.1.0"
+description = "Privacy-aware invoice extraction and deterministic audit pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+authors = [{name = "Multimodal Invoice Auditor Contributors"}]
+dependencies = [
+  "pydantic>=2.8,<3.0",
+  "Pillow>=10.4,<13.0",
+]
+
+[project.optional-dependencies]
+vlm = [
+  "accelerate>=1.0,<2.0",
+  "safetensors>=0.4,<1.0",
+  "torch>=2.4",
+  "transformers>=4.57,<6.0",
+]
+demo = [
+  "gradio>=5.0,<7.0",
+]
+dev = [
+  "pytest>=8.2,<10.0",
+  "pytest-cov>=5.0,<8.0",
+  "ruff>=0.9,<1.0",
+]
+
+[project.scripts]
+invoice-auditor = "invoice_auditor.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "S"]
+ignore = ["S101"]
