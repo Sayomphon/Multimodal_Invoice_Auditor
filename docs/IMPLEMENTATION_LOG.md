@@ -63,3 +63,5 @@
 - แก้ lint findings โดยไม่เปลี่ยน business behavior และเตรียม follow-up CI fix commit
 - ตรวจซ้ำหลังแก้ด้วย `ruff check src tests`: ผ่าน
 - ตรวจซ้ำด้วย unit/integration tests: ผ่าน 23/23 tests
+- Push follow-up commit `5617593` (`Fix CI lint checks`) ไปยัง `origin/main` สำเร็จ โดยไม่ใช้ force push
+- GitHub Actions run `29592184295`: ผ่านทั้ง Python 3.11 และ 3.12 (install, lint และ test)
