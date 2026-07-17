@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Callable
 
 from invoice_auditor.models import (
     NormalizationIssue,
@@ -60,16 +60,18 @@ def normalize_money(value: RawValue) -> Decimal | None:
             text = text.replace(",", "")
     elif "," in text:
         parts = text.split(",")
-        if len(parts) == 2 and len(parts[1]) in {1, 2}:
-            text = ".".join(parts)
-        else:
-            text = "".join(parts)
+        text = (
+            ".".join(parts)
+            if len(parts) == 2 and len(parts[1]) in {1, 2}
+            else "".join(parts)
+        )
     elif text.count(".") > 1:
         parts = text.split(".")
-        if len(parts[-1]) in {1, 2}:
-            text = "".join(parts[:-1]) + "." + parts[-1]
-        else:
-            text = "".join(parts)
+        text = (
+            "".join(parts[:-1]) + "." + parts[-1]
+            if len(parts[-1]) in {1, 2}
+            else "".join(parts)
+        )
     try:
         return Decimal(text)
     except InvalidOperation as exc:
@@ -162,4 +164,3 @@ def normalize_invoice(raw: RawInvoiceData) -> NormalizationResult:
         currency=capture("currency", raw.currency, normalize_currency),
     )
     return NormalizationResult(invoice=normalized, issues=issues)
-

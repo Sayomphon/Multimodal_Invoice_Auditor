@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-
 NOW = datetime(2026, 7, 17, 12, 0, tzinfo=UTC)
 
 
@@ -26,4 +25,3 @@ def valid_raw() -> dict[str, object]:
         "total": "10,700.00",
         "currency": "THB",
     }
-

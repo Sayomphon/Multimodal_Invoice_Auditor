@@ -23,7 +23,7 @@ class Severity(StrEnum):
 
 
 class AuditDecision(StrEnum):
-    PASS = "PASS"
+    PASS = "PASS"  # noqa: S105 - workflow decision, not a credential.
     REVIEW = "REVIEW"
     REJECT = "REJECT"
 

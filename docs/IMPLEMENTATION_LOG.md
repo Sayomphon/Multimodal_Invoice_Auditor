@@ -58,3 +58,8 @@
 - กำหนดให้คง `LICENSE` จาก remote และใช้ README ฉบับ implementation แทน placeholder
 - ไม่รวมไฟล์ Word blueprint ต้นฉบับใน code release และเพิ่ม `*.docx` ใน `.gitignore`
 - เตรียม publish โดยรักษา remote history และไม่ใช้ force push
+- Push initial implementation commit `d07011a` ไปยัง `origin/main` สำเร็จ
+- GitHub Actions รอบแรกพบ Ruff lint findings 9 รายการ ซึ่งเป็น import modernization, explicit `zip(strict=True)`, simplification, unused import และ false positives ของ Bandit rules สำหรับ `PASS` decision/random synthetic seed
+- แก้ lint findings โดยไม่เปลี่ยน business behavior และเตรียม follow-up CI fix commit
+- ตรวจซ้ำหลังแก้ด้วย `ruff check src tests`: ผ่าน
+- ตรวจซ้ำด้วย unit/integration tests: ผ่าน 23/23 tests

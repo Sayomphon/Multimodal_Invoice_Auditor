@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import random
 import tempfile
-from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
@@ -353,7 +352,7 @@ def generate_dataset(
         raise FileExistsError(f"dataset already exists: {manifest_path}; pass overwrite=True")
     resolved_font = resolve_thai_font(font_path)
     fonts = _fonts(resolved_font)
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311 - reproducibility is the security requirement.
     image_dir = root / "images"
     record_dir = root / "records"
     image_dir.mkdir(parents=True, exist_ok=True)

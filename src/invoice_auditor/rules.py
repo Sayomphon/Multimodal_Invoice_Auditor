@@ -40,7 +40,10 @@ def thai_tax_id_checksum_is_valid(tax_id: str) -> bool:
 
     if len(tax_id) != 13 or not tax_id.isdigit():
         return False
-    weighted_sum = sum(int(digit) * weight for digit, weight in zip(tax_id[:12], range(13, 1, -1)))
+    weighted_sum = sum(
+        int(digit) * weight
+        for digit, weight in zip(tax_id[:12], range(13, 1, -1), strict=True)
+    )
     expected = (11 - (weighted_sum % 11)) % 10
     return expected == int(tax_id[-1])
 
