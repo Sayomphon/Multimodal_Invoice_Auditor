@@ -34,8 +34,8 @@ class SyntheticEvaluationTests(unittest.TestCase):
             self.assertEqual(metrics["decision_accuracy"], 1.0)
             self.assertEqual(metrics["numeric_accuracy"], 1.0)
             self.assertEqual(metrics["json_validity_rate"], 1.0)
+            self.assertEqual(set(metrics["segments"]), {"sidecar_rule_baseline"})
 
 
 if __name__ == "__main__":
     unittest.main()
-

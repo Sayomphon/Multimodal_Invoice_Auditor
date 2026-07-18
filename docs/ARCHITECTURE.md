@@ -35,3 +35,23 @@
 - ส่ง `AuditReport` เข้า human-review queue หรือ event stream
 - ย้าย configuration ไป config service ที่มี approval workflow
 
+## Colab runtime boundary
+
+```text
+Runtime preflight -> Strict model registry -> Primary Qwen
+       |                    |                     |
+       | insufficient VRAM  | allowlisted OOM     |
+       +--------------------+---------------------+
+                            v
+                      Fallback Qwen
+                            |
+Image / one-page PDF -> safe in-memory preprocessing -> raw JSON + ModelTrace
+                            |
+                            v
+             deterministic normalization/rules/policy
+                            |
+                            v
+              per-attempt batch record + evaluation artifacts
+```
+
+`VLMRuntime` เป็นเจ้าของ model lifecycle และ fallback. `QwenVLMExtractor` เป็นเจ้าของ model-specific prompt/generation และ telemetry. `InvoiceAuditPipeline` ยังคงไม่ผูกกับ model. `batch_inference` รับประกัน denominator integrity ส่วน `evaluation` รองรับทั้ง legacy audit reports และ batch records. Notebook ทำเฉพาะ orchestration ผ่าน package APIs เหล่านี้

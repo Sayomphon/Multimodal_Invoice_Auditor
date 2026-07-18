@@ -82,8 +82,22 @@ class ModelTrace(StrictModel):
     model_id: str
     model_revision: str | None = None
     prompt_version: str
+    runtime_profile: str | None = None
+    device: str | None = None
+    dtype: str | None = None
+    quantization: str | None = None
+    torch_version: str | None = None
+    transformers_version: str | None = None
+    cuda_version: str | None = None
+    gpu_name: str | None = None
+    model_load_ms: int | None = Field(default=None, ge=0)
+    preprocess_ms: int | None = Field(default=None, ge=0)
+    inference_ms: int | None = Field(default=None, ge=0)
     generation_parameters: dict[str, Any]
     latency_ms: int = Field(ge=0)
+    peak_vram_mb: float | None = Field(default=None, ge=0)
+    fallback_from: str | None = None
+    fallback_reason: str | None = None
     raw_response: str | None = None
 
 

@@ -1,0 +1,2 @@
+# Colab intent file. Freeze again only after the one-image GPU smoke test passes.
+-e .[pdf,vlm]

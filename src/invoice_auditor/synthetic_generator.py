@@ -389,6 +389,10 @@ def generate_dataset(
         atomic_write_json(record_path, raw)
         entries.append(
             {
+                "dataset_name": "synthetic_thai_invoice",
+                "dataset_revision": f"generator-v1-seed-{seed}",
+                "split": "evaluation",
+                "dataset_partition": "clean" if variant == "clean" else "transformed",
                 "image_id": image_id,
                 "image_path": str(image_path.relative_to(root)),
                 "record_path": str(record_path.relative_to(root)),
@@ -396,6 +400,16 @@ def generate_dataset(
                 "variant": variant,
                 "transformation": transform,
                 "expected_fields": raw,
+                "evaluable_fields": [
+                    "invoice_number",
+                    "vendor_name",
+                    "tax_id",
+                    "invoice_date",
+                    "subtotal",
+                    "vat",
+                    "total",
+                    "currency",
+                ],
                 **truth,
             }
         )

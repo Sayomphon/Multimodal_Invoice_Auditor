@@ -1,0 +1,10 @@
+# Candidate exact direct pins for the first Colab GPU smoke test.
+# Status: NOT YET COLAB-VERIFIED. P0-06 must regenerate/freeze this file after
+# a one-image smoke test, then rerun from a clean runtime before release.
+pydantic==2.11.7
+Pillow==11.3.0
+pypdfium2==4.30.0
+torch==2.8.0
+transformers==4.57.1
+accelerate==1.10.1
+safetensors==0.6.2

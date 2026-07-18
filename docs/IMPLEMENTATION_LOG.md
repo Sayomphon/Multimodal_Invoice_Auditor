@@ -65,3 +65,35 @@
 - ตรวจซ้ำด้วย unit/integration tests: ผ่าน 23/23 tests
 - Push follow-up commit `5617593` (`Fix CI lint checks`) ไปยัง `origin/main` สำเร็จ โดยไม่ใช้ force push
 - GitHub Actions run `29592184295`: ผ่านทั้ง Python 3.11 และ 3.12 (install, lint และ test)
+
+## 2026-07-18 — Colab implementation plan execution
+
+- เพิ่ม `notebooks/00_colab_bootstrap.ipynb` และปรับ notebook 02 เป็น standalone real-VLM orchestration: clean checkout, candidate lock install, CUDA/VRAM preflight, immutable model registry, synthetic golden set, optional image/PDF upload, one-image smoke, batch inference, metrics, artifacts และ GPU cleanup
+- ปรับ notebook 03 ให้แสดง segmented metrics, failure accounting และ public/redacted audit records โดยไม่เปิด Gradio/public tunnel
+- ขยาย `ModelTrace` แบบ backward-compatible ให้ครอบคลุม runtime/profile/device/dtype/package/CUDA/GPU, model load/preprocess/inference/total latency, peak VRAM และ fallback provenance
+- เพิ่ม CPU-safe runtime detection และ `environment.json` writer
+- เพิ่ม strict model registry พร้อม full upstream revision SHAs และสถานะ `candidate_unverified`; ค่าปัจจุบันยังไม่ใช่ tested Colab revisions
+- เพิ่ม primary/fallback runtime ที่ fallback เฉพาะ preflight VRAM, allowlisted CUDA OOM และ known compatibility errors; parse/schema/unsafe-input error ไม่ trigger fallback
+- ปรับ Qwen adapter ให้ reuse model, แยก model-load/per-image timing, reset/synchronize CUDA peak memory และ release references/cache ได้
+- เพิ่ม manifest-driven real-VLM batch runner ที่สร้างหนึ่ง structured success/failed record ต่อ attempt และบังคับ relative/logical public source path
+- เพิ่ม single-page PDF rendering ผ่าน optional PDFium โดยจำกัด file/header/page/DPI/dimensions/pixels และไม่สร้าง temp rendered file
+- เพิ่ม SROIE local/Hugging Face acquisition tooling: deterministic subset, revision/license fields, image SHA-256, supported-field mapping และ `evaluable_fields`; ไม่ commit raw dataset
+- ขยาย evaluation ให้ failed/missing/invalid อยู่ใน denominator, แยก sidecar/synthetic clean/transformed/SROIE, รายงาน field denominators, rule/decision metrics, robustness delta, p50/p95 latency, peak VRAM, model/profile และ error-stage breakdown
+- เพิ่ม redacted presentation contract และ artifact validator สำหรับ Colab ship gate
+- เพิ่ม candidate `requirements-colab.in`, `requirements-colab.lock`, PDF optional dependency, CI PDF install และ runbook/security/operations/evaluation/architecture documentation
+- เพิ่ม/ขยาย local tests สำหรับ runtime, fallback classification, batch accounting, PDF safety, SROIE manifest, segmented evaluation, artifacts และ notebook JSON/code-cell validation
+
+### Local verification
+
+- Baseline ก่อนแก้: 23/23 tests ผ่านด้วย local Python interpreter
+- หลัง implementation: pytest ผ่าน 40/40 cases รวม PDFium integration จริง; Ruff ผ่าน; compile ของ source/tests/scripts และ code cells ใน notebooks ผ่าน
+- Sidecar smoke 6 records ผ่านและถูกแยกเป็น `sidecar_rule_baseline` เท่านั้น; decision accuracy 1.0 ยังเป็น deterministic baseline ไม่ใช่ VLM score
+- สร้าง wheel `multimodal_invoice_auditor-0.2.0-py3-none-any.whl` แบบ no-dependency/no-isolation สำเร็จ
+- ยังไม่ได้ดาวน์โหลด Qwen weights, รัน CUDA inference, เปิด Colab runtime หรือ freeze transitive dependency graph จาก tested environment
+
+### External acceptance still required
+
+- รัน candidate one-image smoke บน Colab GPU และแก้ dependency compatibilityผ่าน source control เท่านั้น
+- freeze exact environment หลัง smoke ผ่าน แล้ว factory reset runtime
+- rerun ≥5 synthetic images จากศูนย์, validate artifacts/metrics/failure samples และบันทึก hardware/run ID
+- เปลี่ยน registry status เป็น `colab_verified` และเผยแพร่ actual redacted metrics หลัง two-pass acceptance ผ่านเท่านั้น
