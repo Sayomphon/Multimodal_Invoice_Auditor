@@ -1,29 +1,48 @@
 # Multimodal Invoice Auditor
 
-ระบบตัวอย่างสำหรับรับภาพ Invoice/Receipt, สกัดข้อมูลแบบ structured, normalize ค่า และตรวจด้วยกฎธุรกิจที่ deterministic ก่อนตัดสิน `PASS`, `REVIEW` หรือ `REJECT` พร้อม audit trail
+A reference implementation for ingesting invoice or receipt images, extracting structured data, normalizing values, and applying deterministic business rules to produce a `PASS`, `REVIEW`, or `REJECT` decision with an auditable trail.
 
-จุดออกแบบหลักคือการแยก trust boundary: Vision-Language Model (VLM) ทำหน้าที่อ่านเอกสารเท่านั้น ส่วนการแปลงชนิดข้อมูล การคำนวณ VAT/ยอดรวม การตรวจ duplicate และ decision policy อยู่ใน Python ที่ version, test และ audit ได้
+The central design principle is a clear trust boundary: the Vision-Language Model (VLM) reads the document, while Python code performs type conversion, VAT and total calculations, duplicate checks, and decision policy evaluation. This keeps financial decisions versioned, testable, and reproducible.
+
+> **Release status:** the local implementation gates are complete. Clean Google Colab GPU acceptance is still pending, so no actual VLM quality metric is presented as verified.
 
 ## Architecture
 
 ```text
-Image -> Safe preprocessing -> VLM extraction -> RawInvoiceData
-                                                |
-                                                v
-Audit JSON -> Normalization -> NormalizedInvoice -> Rule Engine -> Decision Policy
-                                                        |               |
-                                                        +---- AuditReport
+Image or single-page PDF
+        |
+        v
+Safe preprocessing --> VLM extraction --> RawInvoiceData
+                                              |
+                                              v
+Audit JSON <-- Decision policy <-- Rule engine <-- Normalization <-- NormalizedInvoice
 ```
 
-Core pipeline ไม่โหลดโมเดลและไม่เรียก external API โดยอัตโนมัติ การติดตั้ง VLM เป็น optional extra เพื่อให้ business logic รันใน CI/CPU ได้โดยไม่ต้องใช้ GPU
+The core pipeline does not load a model or call an external API automatically. VLM support is an optional dependency, which allows business logic and tests to run on CPU-based CI environments without a GPU.
 
-เวอร์ชัน 0.2.0 เพิ่ม Colab orchestration, GPU/VRAM telemetry, strict primary/fallback registry, per-attempt batch records, segmented VLM evaluation, SROIE manifest tooling และ safe single-page PDF rendering. อย่างไรก็ตามสถานะปัจจุบันคือ **implementation complete for local gates; clean Colab GPU acceptance pending** จึงยังไม่มี actual VLM metric ที่รับรองแล้ว
+Version 0.2.0 adds Google Colab orchestration, GPU/VRAM telemetry, a strict primary/fallback model registry, per-attempt batch records, segmented VLM evaluation, SROIE manifest tooling, and safe single-page PDF rendering.
 
-รายละเอียดเพิ่มเติมอยู่ที่ [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/SECURITY.md](docs/SECURITY.md) และ [docs/OPERATIONS.md](docs/OPERATIONS.md)
+For design, security, and operating details, see the [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), and [operations](docs/OPERATIONS.md) documentation.
+
+## Capabilities
+
+- Extract eight core fields: invoice number, vendor, Tax ID, invoice date, subtotal, VAT, total, and currency.
+- Normalize dates, amounts, currencies, and Tax IDs deterministically.
+- Evaluate required fields, total consistency, VAT rate, Tax ID format, duplicate invoices, and future dates.
+- Preserve raw extractor output, normalization issues, per-rule evidence, decision policy versioning, and a configuration fingerprint for audit and replay.
+- Process images or bounded, single-page PDFs without invoking shell tools from a document path.
+- Run model inference in batches with one success or failure record for every attempted input.
+- Mask vendor and Tax ID values when writing outputs intended for publication.
+
+## Requirements
+
+- Python 3.11 or later
+- A CUDA-capable GPU for local VLM inference (optional)
+- Google Colab with a GPU runtime for the Colab acceptance workflow (pending verification)
 
 ## Quick start
 
-ต้องใช้ Python 3.11 ขึ้นไป
+Create a virtual environment, install the development dependencies, generate reproducible synthetic invoices, and run an audit:
 
 ```bash
 python -m venv .venv
@@ -35,9 +54,11 @@ invoice-auditor audit-json data/synthetic/records/SYN-42-0001.json
 python -m pytest
 ```
 
-คำสั่ง `generate-synthetic` สร้าง source JSON, rendered invoice และ manifest แบบ reproducible โดยไม่ใช้เอกสารลูกค้าจริง
+`generate-synthetic` creates source JSON, rendered invoice images, and a manifest without using real customer documents.
 
-## VLM inference (optional)
+## Optional VLM inference
+
+Install the VLM extra, then audit an invoice image. Model weights are downloaded only when `--allow-download` is supplied.
 
 ```bash
 python -m pip install -e ".[vlm]"
@@ -46,9 +67,9 @@ invoice-auditor audit-image path/to/invoice.png \
   --output reports/audit.json
 ```
 
-เมื่อไม่ระบุ `--model` CLI ใช้ `config/models.colab.json`, ตรวจ GPU/VRAM และ fallback เฉพาะ OOM/compatibility ที่อยู่ใน allowlist. JSON/schema/preprocessing failure จะไม่ trigger fallback. โมเดลจะถูกดาวน์โหลดเมื่อระบุ `--allow-download` เท่านั้น
+When `--model` is omitted, the CLI uses [`config/models.colab.json`](config/models.colab.json). It checks GPU/VRAM eligibility and uses the configured fallback only for allowlisted out-of-memory or compatibility failures. JSON, schema, and preprocessing errors never trigger model fallback.
 
-Batch VLM inference:
+Run batch inference from a manifest:
 
 ```bash
 invoice-auditor batch-inference data/synthetic/manifest.json \
@@ -57,31 +78,31 @@ invoice-auditor batch-inference data/synthetic/manifest.json \
   --public-output
 ```
 
-หนึ่ง attempted image/PDF จะสร้างหนึ่ง success/failed record เสมอ และ model instance ถูก reuse ตลอด batch
+The model instance is reused across the batch, and every attempted image or PDF produces exactly one `success` or `failed` record.
 
-## Google Colab
+## Google Colab workflow
 
-- เริ่มจาก `notebooks/00_colab_bootstrap.ipynb` สำหรับ environment smoke
-- `notebooks/02_vlm_extraction_pipeline.ipynb` เปิด standalone ได้และทำ one-image + golden-set inference
-- `notebooks/03_evaluation_and_demo.ipynb` แสดง segmented metrics และ redacted audit view
-- ขั้นตอน two-pass freeze/acceptance และ private-repository secret อยู่ใน [docs/COLAB_RUNBOOK.md](docs/COLAB_RUNBOOK.md)
+- Start with [`notebooks/00_colab_bootstrap.ipynb`](notebooks/00_colab_bootstrap.ipynb) for an environment smoke test.
+- Run [`notebooks/02_vlm_extraction_pipeline.ipynb`](notebooks/02_vlm_extraction_pipeline.ipynb) independently for one-image and golden-set inference.
+- Use [`notebooks/03_evaluation_and_demo.ipynb`](notebooks/03_evaluation_and_demo.ipynb) for segmented metrics and a redacted audit view.
+- Follow the two-pass freeze and acceptance procedure in the [Google Colab runbook](docs/COLAB_RUNBOOK.md).
 
-`requirements-colab.lock` และ model SHAs ปัจจุบันเป็น candidate ที่ต้องผ่าน clean Colab GPU ก่อนเปลี่ยนสถานะเป็น verified
+`requirements-colab.lock` and the current model SHAs are candidates. Change their status to verified only after the clean Colab GPU acceptance run succeeds.
 
-## Single-page PDF
+## Single-page PDF input
 
-ติดตั้ง optional dependency แล้วใช้ `audit-image` หรือ batch manifest เดิม:
+Install the PDF extra and use the existing `audit-image` or batch-manifest commands:
 
 ```bash
 python -m pip install -e ".[vlm,pdf]"
 invoice-auditor audit-image synthetic-invoice.pdf --allow-download
 ```
 
-PDF ต้องมีหนึ่งหน้าและผ่าน file-size, header, page-count, DPI, dimension และ total-pixel bounds. ระบบ render เข้า memory ผ่าน PDFium และไม่เรียก shell/Poppler จาก input path
+PDF input must contain one page and pass file-size, header, page-count, DPI, dimension, and total-pixel limits. The document is rendered in memory through PDFium; no shell or Poppler command is constructed from an input path.
 
 ## SROIE evaluation subset
 
-Repository ไม่ commit raw SROIE images. หลังตรวจ license แล้ว สามารถเตรียม deterministic local subset ได้ด้วย:
+Raw SROIE images are not committed to this repository. After confirming the dataset licence, prepare a deterministic local subset with:
 
 ```bash
 python scripts/prepare_sroie.py \
@@ -93,35 +114,42 @@ python scripts/prepare_sroie.py \
   --count 50 --seed 42
 ```
 
-Manifest เก็บ SHA-256 และ `evaluable_fields`; field ที่ SROIE ไม่มีจะไม่ถูกนับเป็น incorrect
+The generated manifest records SHA-256 checksums and `evaluable_fields`. A field not available in SROIE is excluded from scoring instead of being treated as an incorrect prediction.
 
-## Local demo UI (optional)
+## Local demo UI
 
 ```bash
 python -m pip install -e ".[vlm,demo]"
 invoice-auditor demo --model Qwen/Qwen3-VL-4B-Instruct
 ```
 
-UI bind เฉพาะ `127.0.0.1` และไม่เปิด Gradio share link เพื่อลดความเสี่ยงส่งเอกสารออกสู่ public endpoint โดยไม่ตั้งใจ
+The UI binds only to `127.0.0.1` and does not enable a Gradio share link, preventing accidental publication of sensitive documents to a public endpoint.
 
-## Core outputs
+## Audit report contents
 
-- `raw`: ค่าที่ extractor ส่งกลับ โดยอนุญาต `null` และไม่เดาค่าที่ไม่มี evidence
-- `normalized`: วันที่ จำนวนเงิน สกุลเงิน และ Tax ID หลัง deterministic normalization
-- `normalization_issues`: ปัญหาที่พบโดยไม่กลบ error
-- `rules`: ผลแต่ละกฎพร้อม observed, expected, severity และเหตุผล
-- `decision`: ผลรวมตาม policy ที่ versioned
-- `config_fingerprint`: SHA-256 ของ rule configuration เพื่อรองรับ audit/replay
+Each audit report contains:
 
-## Scope
+- `raw`: values returned by the extractor; absent evidence remains `null` rather than being guessed.
+- `normalized`: dates, amounts, currency, and Tax ID after deterministic normalization.
+- `normalization_issues`: detected conversion problems without hiding the original error.
+- `rules`: each rule result with observed value, expected value, severity, and explanation.
+- `decision`: the aggregated result produced by the versioned decision policy.
+- `config_fingerprint`: a SHA-256 fingerprint of the rule configuration for auditability and replay.
 
-MVP รองรับเอกสารภาพหน้าเดียวและ 8 fields ได้แก่ invoice number, vendor, Tax ID, invoice date, subtotal, VAT, total และ currency รวมถึงกฎ required fields, total consistency, VAT rate, Tax ID format, duplicate invoice และ future date
+## Scope and limitations
 
-ไม่ครอบคลุม line-item extraction, multi-page workflow, ERP/PO/GRN reconciliation, fraud forensics หรือคำวินิจฉัยทางบัญชีและภาษี
+This MVP supports single-page image documents and the eight core fields above. It does not cover line-item extraction, multi-page workflows, ERP/PO/GRN reconciliation, fraud forensics, or accounting and tax opinions.
 
-## Privacy
+## Privacy and publication safety
 
-ห้าม commit invoice จริงที่มี PII หรือข้อมูลการค้าเข้า repository สาธารณะ ใช้ synthetic/public data สำหรับ demo และใช้ `--public-output` เมื่อต้องการ mask vendor/Tax ID ในผลลัพธ์ที่จะเผยแพร่
+Do not commit real invoices containing PII or commercially sensitive data to a public repository. Use synthetic or licensed public data for demonstrations. Add `--public-output` when generating output that may be shared externally so vendor and Tax ID values are masked.
+
+## Development checks
+
+```bash
+python -m pytest
+ruff check src tests
+```
 
 ## Project documentation
 
